@@ -38,28 +38,47 @@
 
   /* ─── HEADER ─────────────────────────────────────────── */
   header {
-    padding: 28px 24px 0;
+    padding: 36px 24px 0;
     max-width: 780px;
     margin: 0 auto;
   }
 
+  .header-top {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .condo-logo {
+    width: 80px;
+    height: 80px;
+    object-fit: contain;
+    flex-shrink: 0;
+    filter: drop-shadow(0 4px 16px rgba(0,0,0,.5));
+    transition: transform .2s;
+  }
+  .condo-logo:hover { transform: scale(1.05) rotate(2deg); }
+
+  .header-text { flex: 1; }
+
   .logo {
     font-family: 'Syne', sans-serif;
     font-weight: 800;
-    font-size: 13px;
-    letter-spacing: .15em;
+    font-size: 11px;
+    letter-spacing: .18em;
     text-transform: uppercase;
-    color: var(--accent);
+    color: var(--muted);
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
+    margin-bottom: 6px;
   }
-  .logo-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); display: inline-block; }
+  .logo-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); display: inline-block; }
 
   .hero {
-    margin-top: 32px;
-    padding-bottom: 32px;
+    padding-bottom: 28px;
     border-bottom: 1px solid var(--border);
+    margin-top: 4px;
   }
 
   .hero h1 {
@@ -659,13 +678,18 @@
 </script>
 
 <header>
-  <div class="logo"><span class="logo-dot"></span> Indica Aí</div>
-  <div class="hero">
-    <h1>Profissionais do<br><span id="condoNome"></span></h1>
-    <p>Indicações de moradores, para moradores. Encontre quem já trabalhou aqui no Condomínio.</p>
-    <div class="hero-actions">
-      <button class="btn btn-primary" onclick="openModal('add')">＋ Indicar profissional</button>
-      <button class="btn btn-ghost" onclick="openModal('rate')">⭐ Avaliar alguém</button>
+  <div class="header-top">
+    <img src="logo.png" alt="Condomínio Cidades Portuguesas" class="condo-logo" />
+    <div class="header-text">
+      <div class="logo"><span class="logo-dot"></span> Indica Aí</div>
+      <div class="hero">
+        <h1>Profissionais do<br><span id="condoNome"></span></h1>
+        <p>Indicações de moradores, para moradores. Encontre quem já trabalhou aqui no Condomínio.</p>
+        <div class="hero-actions">
+          <button class="btn btn-primary" onclick="openModal('add')">＋ Indicar profissional</button>
+          <button class="btn btn-ghost" onclick="openModal('rate')">⭐ Avaliar alguém</button>
+        </div>
+      </div>
     </div>
   </div>
 </header>
