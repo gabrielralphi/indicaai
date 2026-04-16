@@ -894,7 +894,7 @@ async function postData(body) {
 // ─── DETAIL ─────────────────────────────────────────────
 function detailBaseHTML(p) {
   const avg = p.avgNota ? parseFloat(p.avgNota).toFixed(1) : '—';
-  const wppNum = (p.telefone||'').replace(/\D/g,'');
+  const wppNum = String(p.telefone || '').replace(/\D/g,'');
   const wppLink = wppNum ? `https://wa.me/55${wppNum}` : null;
   return `
   <div class="modal-header">
