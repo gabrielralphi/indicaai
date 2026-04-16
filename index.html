@@ -38,77 +38,47 @@
 
   /* ─── HEADER ─────────────────────────────────────────── */
   header {
-    padding: 40px 24px 0;
+    padding: 36px 24px 0;
     max-width: 780px;
     margin: 0 auto;
   }
 
   .header-top {
     display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0;
-  }
-
-  .header-brand {
-    display: flex;
     align-items: center;
-    gap: 16px;
-    margin-bottom: 20px;
+    gap: 20px;
   }
 
   .condo-logo {
-    width: 64px;
-    height: 64px;
+    width: 80px;
+    height: 80px;
     object-fit: contain;
     flex-shrink: 0;
-    filter: drop-shadow(0 2px 12px rgba(0,0,0,.6));
-    transition: transform .25s cubic-bezier(.34,1.56,.64,1);
+    filter: drop-shadow(0 4px 16px rgba(0,0,0,.5));
+    transition: transform .2s;
   }
-  .condo-logo:hover { transform: scale(1.08) rotate(3deg); }
+  .condo-logo:hover { transform: scale(1.05) rotate(2deg); }
 
-  .brand-text {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-  }
-
-  .brand-label {
-    font-family: 'Syne', sans-serif;
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: .22em;
-    text-transform: uppercase;
-    color: var(--muted);
-  }
-
-  .brand-name {
-    font-family: 'Syne', sans-serif;
-    font-size: 18px;
-    font-weight: 800;
-    color: var(--text);
-    line-height: 1.1;
-  }
+  .header-text { flex: 1; }
 
   .logo {
     font-family: 'Syne', sans-serif;
-    font-weight: 700;
+    font-weight: 800;
     font-size: 11px;
     letter-spacing: .18em;
     text-transform: uppercase;
-    color: var(--accent);
+    color: var(--muted);
     display: flex;
     align-items: center;
     gap: 6px;
-    margin-bottom: 10px;
+    margin-bottom: 6px;
   }
   .logo-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); display: inline-block; }
-
-  .header-text { width: 100%; }
 
   .hero {
     padding-bottom: 28px;
     border-bottom: 1px solid var(--border);
+    margin-top: 4px;
   }
 
   .hero h1 {
@@ -709,13 +679,7 @@
 
 <header>
   <div class="header-top">
-    <div class="header-brand">
-      <img src="logo.png" alt="Condomínio Cidades Portuguesas" class="condo-logo" />
-      <div class="brand-text">
-        <span class="brand-label">Condomínio</span>
-        <span class="brand-name">Cidades Portuguesas</span>
-      </div>
-    </div>
+    <img src="logo.png" alt="Condomínio Cidades Portuguesas" class="condo-logo" />
     <div class="header-text">
       <div class="logo"><span class="logo-dot"></span> Indica Aí</div>
       <div class="hero">
@@ -1059,7 +1023,118 @@ async function postData(body) {
   }
 }
 
-// ─── DETAIL ─────────────────────────────────────────────
+// ─── EDIÇÃO ──────────────────────────────────────────────
+function openEdit(id) {
+  const p = allProfissionais.find(x => String(x.id) === String(id));
+  if (!p) return;
+  const modal = document.getElementById('modalContent');
+  modal.innerHTML = editFormHTML(p);
+  buildEditRamoPicker(p);
+  document.getElementById('overlay').classList.add('open');
+}
+
+function editFormHTML(p) {
+  return `
+  <div class="modal-header">
+    <div class="modal-title">Editar profissional</div>
+    <button class="close-btn" onclick="closeModal()">×</button>
+  </div>
+  <div class="form-grid">
+    <div class="form-row">
+      <div class="field"><label>Nome *</label><input id="e_nome" value="${esc(p.nome)}" /></div>
+      <div class="field"><label>Telefone / WhatsApp *</label><input id="e_tel" value="${esc(String(p.telefone||''))}" /></div>
+    </div>
+    <div class="field">
+      <label>Ramo(s) * — selecione um ou mais</label>
+      <div class="ramo-picker" id="editRamoPicker"></div>
+      <div class="ramo-custom-wrap">
+        <input id="e_ramo_custom" placeholder="Outro ramo… (digite e clique em +)" />
+        <button class="ramo-add-btn" onclick="addEditRamoCustom()">+ Adicionar</button>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="field"><label>Valor cobrado</label><input id="e_valor" value="${esc(String(p.valor||''))}" /></div>
+    </div>
+    <div class="field"><label>Comentário</label><textarea id="e_comentario">${esc(String(p.comentario||''))}</textarea></div>
+    <input type="hidden" id="e_id" value="${esc(String(p.id))}" />
+    <button class="form-submit" onclick="submitEdit()">💾 Salvar alterações</button>
+  </div>`;
+}
+
+let editSelectedRamos = [];
+
+function buildEditRamoPicker(p) {
+  const existentes = String(p.ramo || '').split(',').map(r => r.trim()).filter(Boolean);
+  editSelectedRamos = [...existentes];
+  const picker = document.getElementById('editRamoPicker');
+  if (!picker) return;
+
+  // chips da lista padrão
+  picker.innerHTML = RAMOS.map(r => {
+    const sel = existentes.includes(r);
+    return `<div class="ramo-chip${sel ? ' selected' : ''}" onclick="toggleEditRamoChip(this,'${r}')">${r}</div>`;
+  }).join('');
+
+  // chips customizados que não estão na lista padrão
+  existentes.filter(r => !RAMOS.includes(r)).forEach(r => {
+    const chip = document.createElement('div');
+    chip.className = 'ramo-chip selected';
+    chip.textContent = r;
+    chip.onclick = () => toggleEditRamoChip(chip, r);
+    picker.appendChild(chip);
+  });
+}
+
+function toggleEditRamoChip(el, ramo) {
+  const idx = editSelectedRamos.indexOf(ramo);
+  if (idx === -1) {
+    editSelectedRamos.push(ramo);
+    el.classList.add('selected');
+  } else {
+    editSelectedRamos.splice(idx, 1);
+    el.classList.remove('selected');
+  }
+}
+
+function addEditRamoCustom() {
+  const input = document.getElementById('e_ramo_custom');
+  const val = input?.value.trim();
+  if (!val) return;
+  if (editSelectedRamos.includes(val)) { input.value = ''; return; }
+  const picker = document.getElementById('editRamoPicker');
+  const chip = document.createElement('div');
+  chip.className = 'ramo-chip selected';
+  chip.textContent = val;
+  chip.onclick = () => toggleEditRamoChip(chip, val);
+  picker.appendChild(chip);
+  editSelectedRamos.push(val);
+  input.value = '';
+}
+
+async function submitEdit() {
+  const id   = document.getElementById('e_id')?.value;
+  const nome = document.getElementById('e_nome')?.value.trim();
+  const tel  = document.getElementById('e_tel')?.value.trim();
+  if (!nome || !tel) { showToast('Preencha nome e telefone', true); return; }
+  if (!editSelectedRamos.length) { showToast('Selecione ao menos um ramo', true); return; }
+
+  const btn = document.querySelector('.form-submit');
+  btn.disabled = true; btn.textContent = 'Salvando…';
+
+  const body = {
+    action: 'update',
+    id,
+    nome,
+    ramo: editSelectedRamos.join(', '),
+    telefone: tel,
+    valor: document.getElementById('e_valor')?.value.trim() || '',
+    comentario: document.getElementById('e_comentario')?.value.trim() || ''
+  };
+
+  await postData(body);
+}
+
+
 function detailBaseHTML(p) {
   const avg = p.avgNota ? parseFloat(p.avgNota).toFixed(1) : '—';
   const wppNum = String(p.telefone || '').replace(/\D/g,'');
@@ -1093,6 +1168,7 @@ function detailBaseHTML(p) {
       Chamar no WhatsApp
     </a>` : ''}
     <button class="btn btn-ghost" onclick="closeModal(); setTimeout(()=>openModalRate('${esc(String(p.id))}'),200)">⭐ Avaliar</button>
+    <button class="btn btn-ghost" onclick="openEdit('${esc(String(p.id))}')">✏️ Editar</button>
   </div>
   <div class="reviews-section">
     <h3>Avaliações</h3>
