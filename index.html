@@ -551,6 +551,60 @@
   }
   .review-empty span { font-size: 20px; display: block; margin-bottom: 4px; }
 
+  /* ─── RAMO MULTI-SELECT ──────────────────────────────── */
+  .ramo-picker {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+  }
+  .ramo-chip {
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 500;
+    background: var(--card);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    cursor: pointer;
+    transition: all .15s;
+    user-select: none;
+  }
+  .ramo-chip:hover { border-color: var(--accent); color: var(--accent); }
+  .ramo-chip.selected { background: var(--accent); color: #111; border-color: var(--accent); }
+  .ramo-custom-wrap {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-top: 6px;
+  }
+  .ramo-custom-wrap input {
+    flex: 1;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 8px 12px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    outline: none;
+    transition: border-color .15s;
+  }
+  .ramo-custom-wrap input:focus { border-color: var(--accent); }
+  .ramo-custom-wrap input::placeholder { color: var(--muted); }
+  .ramo-add-btn {
+    padding: 8px 14px;
+    border-radius: 10px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--accent);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all .15s;
+  }
+  .ramo-add-btn:hover { background: var(--accent); color: #111; border-color: var(--accent); }
+
   /* ─── COUNTER ─────────────────────────────────────────── */
   .count-badge {
     background: var(--surface);
@@ -598,7 +652,9 @@
   const RAMOS = [
     "Elétrica","Hidráulica","Pintura","Marcenaria","Marmoraria",
     "Ar-condicionado","Chaveiro","Limpeza","Faxineira","Higienização","Jardinagem","Informática",
-    "Dedetização","Mudança","Serralheria","Gesseiro","Baba","Outros"
+    "Dedetização","Mudança","Serralheria","Gesseiro","Baba","Telas","Pedreiro","Vidraçaria","Oficina",
+	"Pizzaria","Contabilidade","Podolatra","Estética Automotiva","Maquiadora","Salão de Beleza","Refrigeração",
+	"Salgadinhos","Eletrônica","Papel de Parede","Marido Aluguel","Frete","Bolo","Manicure","Outros"
   ];
 </script>
 
@@ -685,7 +741,10 @@ async function loadData() {
 function render() {
   const q = document.getElementById('searchInput').value.toLowerCase();
   let list = allProfissionais;
-  if (selectedRamo !== 'Todos') list = list.filter(p => p.ramo === selectedRamo);
+  if (selectedRamo !== 'Todos') list = list.filter(p => {
+    const ramos = String(p.ramo || '').split(',').map(r => r.trim());
+    return ramos.some(r => r.toLowerCase() === selectedRamo.toLowerCase());
+  });
   if (q) list = list.filter(p =>
     p.nome.toLowerCase().includes(q) ||
     p.ramo.toLowerCase().includes(q) ||
@@ -709,6 +768,7 @@ function cardHTML(p) {
   const avg = p.avgNota ? parseFloat(p.avgNota).toFixed(1) : '—';
   const count = p.totalAvaliacoes || 0;
   const safeId = String(p.id);
+  const ramos = String(p.ramo || '').split(',').map(r => r.trim()).filter(Boolean);
   return `
   <div class="card" onclick="openDetail(this)" data-id="${safeId}">
     <div class="card-name">${esc(p.nome)}</div>
@@ -717,7 +777,7 @@ function cardHTML(p) {
       <div class="rating-count">${count} ${count === 1 ? 'avaliação' : 'avaliações'}</div>
     </div>
     <div class="card-ramo">
-      <span class="tag">${esc(p.ramo)}</span>
+      ${ramos.map(r => `<span class="tag">${esc(r)}</span>`).join('')}
     </div>
     <div class="card-meta">
       ${p.telefone ? `<span class="meta-item phone">📱 ${esc(p.telefone)}</span>` : ''}
@@ -772,10 +832,17 @@ function addFormHTML() {
   <div class="form-grid">
     <div class="form-row">
       <div class="field"><label>Nome *</label><input id="f_nome" placeholder="João Elétrica" /></div>
-      <div class="field"><label>Ramo *</label><select id="f_ramo"></select></div>
+      <div class="field"><label>Telefone / WhatsApp *</label><input id="f_tel" placeholder="(48) 99999-9999" /></div>
+    </div>
+    <div class="field">
+      <label>Ramo(s) * — selecione um ou mais</label>
+      <div class="ramo-picker" id="ramoPicker"></div>
+      <div class="ramo-custom-wrap">
+        <input id="f_ramo_custom" placeholder="Outro ramo… (digite e clique em +)" />
+        <button class="ramo-add-btn" onclick="addRamoCustom()">+ Adicionar</button>
+      </div>
     </div>
     <div class="form-row">
-      <div class="field"><label>Telefone / WhatsApp *</label><input id="f_tel" placeholder="(48) 99999-9999" /></div>
       <div class="field"><label>Valor cobrado</label><input id="f_valor" placeholder="R$ 80/hora ou combinado" /></div>
     </div>
     <div class="field"><label>Comentário</label><textarea id="f_comentario" placeholder="Fez um ótimo serviço, pontual e caprichoso…"></textarea></div>
@@ -798,11 +865,49 @@ function rateFormHTML() {
   </div>`;
 }
 
+let selectedRamos = []; // ramos selecionados no formulário
+
 function buildRamoSelect() {
-  const s = document.getElementById('f_ramo');
-  if (!s) return;
-  s.innerHTML = RAMOS.map(r => `<option value="${r}">${r}</option>`).join('');
+  selectedRamos = [];
+  const picker = document.getElementById('ramoPicker');
+  if (!picker) return;
+  picker.innerHTML = RAMOS.map(r =>
+    `<div class="ramo-chip" onclick="toggleRamoChip(this,'${r}')">${r}</div>`
+  ).join('');
   buildStarPick('starPickAdd', v => selectedStars = v);
+}
+
+function toggleRamoChip(el, ramo) {
+  const idx = selectedRamos.indexOf(ramo);
+  if (idx === -1) {
+    selectedRamos.push(ramo);
+    el.classList.add('selected');
+  } else {
+    selectedRamos.splice(idx, 1);
+    el.classList.remove('selected');
+  }
+}
+
+function addRamoCustom() {
+  const input = document.getElementById('f_ramo_custom');
+  const val = input?.value.trim();
+  if (!val) return;
+  if (selectedRamos.includes(val)) { input.value = ''; return; }
+
+  // adiciona chip visual
+  const picker = document.getElementById('ramoPicker');
+  const chip = document.createElement('div');
+  chip.className = 'ramo-chip selected';
+  chip.textContent = val;
+  chip.onclick = () => toggleRamoChip(chip, val);
+  picker.appendChild(chip);
+
+  selectedRamos.push(val);
+  input.value = '';
+}
+
+function getRamosValue() {
+  return selectedRamos;
 }
 
 function buildProfSelect() {
@@ -833,16 +938,19 @@ function pickStar(el, containerId, v) {
 // ─── SUBMIT ─────────────────────────────────────────────
 async function submitAdd() {
   const nome = document.getElementById('f_nome')?.value.trim();
-  const ramo = document.getElementById('f_ramo')?.value;
-  const tel  = document.getElementById('f_tel')?.value.trim();
+  const ramos = getRamosValue();
+  const tel   = document.getElementById('f_tel')?.value.trim();
   if (!nome || !tel) { showToast('Preencha nome e telefone', true); return; }
+  if (!ramos.length) { showToast('Selecione ao menos um ramo', true); return; }
 
   const btn = document.querySelector('.form-submit');
   btn.disabled = true; btn.textContent = 'Enviando…';
 
   const body = {
     action: 'add',
-    nome, ramo, telefone: tel,
+    nome,
+    ramo: ramos.join(', '),
+    telefone: tel,
     valor: document.getElementById('f_valor')?.value.trim() || '',
     comentario: document.getElementById('f_comentario')?.value.trim() || '',
     nota: selectedStars || ''
@@ -896,13 +1004,14 @@ function detailBaseHTML(p) {
   const avg = p.avgNota ? parseFloat(p.avgNota).toFixed(1) : '—';
   const wppNum = String(p.telefone || '').replace(/\D/g,'');
   const wppLink = wppNum ? `https://wa.me/55${wppNum}` : null;
+  const ramos = String(p.ramo || '').split(',').map(r => r.trim()).filter(Boolean);
   return `
   <div class="modal-header">
     <div style="flex:1"></div>
     <button class="close-btn" onclick="closeModal()">×</button>
   </div>
   <div class="detail-name">${esc(p.nome)}</div>
-  <div class="detail-ramo">${esc(p.ramo)}</div>
+  <div class="detail-ramo">${ramos.map(r => `<span class="tag" style="margin-right:4px">${esc(r)}</span>`).join('')}</div>
   <div class="detail-stats">
     <div class="stat-box">
       <div class="stat-val">${avg}</div>
