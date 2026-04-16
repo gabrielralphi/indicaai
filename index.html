@@ -536,6 +536,20 @@
     color: var(--muted);
   }
   .review-stars { color: var(--accent); margin-bottom: 4px; font-size: 12px; }
+  .review-text { color: var(--text); font-size: 13px; line-height: 1.5; }
+  .review-loading {
+    padding: 20px 0;
+    color: var(--muted);
+    font-size: 13px;
+    font-style: italic;
+  }
+  .review-empty {
+    padding: 20px 0;
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.8;
+  }
+  .review-empty span { font-size: 20px; display: block; margin-bottom: 4px; }
 
   /* ─── COUNTER ─────────────────────────────────────────── */
   .count-badge {
@@ -873,15 +887,11 @@ async function postData(body) {
 }
 
 // ─── DETAIL ─────────────────────────────────────────────
-function openDetail(id) {
-  const p = allProfissionais.find(x => x.id == id);
-  if (!p) return;
-  const modal = document.getElementById('modalContent');
+function detailBaseHTML(p) {
   const avg = p.avgNota ? parseFloat(p.avgNota).toFixed(1) : '—';
   const wppNum = (p.telefone||'').replace(/\D/g,'');
   const wppLink = wppNum ? `https://wa.me/55${wppNum}` : null;
-
-  modal.innerHTML = `
+  return `
   <div class="modal-header">
     <div style="flex:1"></div>
     <button class="close-btn" onclick="closeModal()">×</button>
@@ -910,17 +920,45 @@ function openDetail(id) {
     </a>` : ''}
     <button class="btn btn-ghost" onclick="closeModal(); setTimeout(()=>openModal('rate','${p.id}'),200)">⭐ Avaliar</button>
   </div>
-  ${(p.reviews||[]).length ? `
   <div class="reviews-section">
     <h3>Avaliações</h3>
-    ${p.reviews.map(r => `
-      <div class="review-item">
-        <div class="review-stars">${stars(r.nota)}</div>
-        ${r.comentario ? `<div>${esc(r.comentario)}</div>` : ''}
-      </div>`).join('')}
-  </div>` : ''}`;
+    <div id="reviewsList"><div class="review-loading">Carregando avaliações…</div></div>
+  </div>`;
+}
 
+function renderReviews(reviews) {
+  const el = document.getElementById('reviewsList');
+  if (!el) return;
+  if (!reviews || reviews.length === 0) {
+    el.innerHTML = `<div class="review-empty">
+      <span>💬</span> Nenhuma avaliação ainda.<br>
+      <small>Seja o primeiro a avaliar este profissional!</small>
+    </div>`;
+    return;
+  }
+  el.innerHTML = reviews.map(r => `
+    <div class="review-item">
+      <div class="review-stars">${stars(r.nota)}</div>
+      ${r.comentario ? `<div class="review-text">${esc(r.comentario)}</div>` : '<div class="review-text" style="font-style:italic;color:var(--muted)">Sem comentário</div>'}
+    </div>`).join('');
+}
+
+async function openDetail(id) {
+  const p = allProfissionais.find(x => x.id == id);
+  if (!p) return;
+  const modal = document.getElementById('modalContent');
+  modal.innerHTML = detailBaseHTML(p);
   document.getElementById('overlay').classList.add('open');
+
+  // buscar reviews ao vivo
+  try {
+    const r = await fetch(`${APPS_SCRIPT_URL}?action=reviews&profId=${p.id}`);
+    const d = await r.json();
+    renderReviews(d.reviews || []);
+  } catch(e) {
+    const el = document.getElementById('reviewsList');
+    if (el) el.innerHTML = `<div class="review-empty">Erro ao carregar avaliações.</div>`;
+  }
 }
 
 // ─── TOAST ──────────────────────────────────────────────
