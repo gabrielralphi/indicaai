@@ -592,7 +592,7 @@
   <div class="logo"><span class="logo-dot"></span> Indica Aí</div>
   <div class="hero">
     <h1>Profissionais do<br><span id="condoNome"></span></h1>
-    <p>Indicações de moradores, para moradores. Encontre quem já foi testado aqui dentro.</p>
+    <p>Indicações de moradores, para moradores. Encontre quem já trabalhou aqui no Condomínio.</p>
     <div class="hero-actions">
       <button class="btn btn-primary" onclick="openModal('add')">＋ Indicar profissional</button>
       <button class="btn btn-ghost" onclick="openModal('rate')">⭐ Avaliar alguém</button>
@@ -699,7 +699,7 @@ function cardHTML(p) {
     <div class="card-name">${esc(p.nome)}</div>
     <div class="card-rating">
       <div class="stars">${p.avgNota ? stars(p.avgNota) : '☆☆☆☆☆'}</div>
-      <div class="rating-count">${count} avaliação${count !== 1 ? 'ões' : ''}</div>
+      <div class="rating-count">${count} ${count === 1 ? 'avaliação' : 'avaliações'}</div>
     </div>
     <div class="card-ramo">
       <span class="tag">${esc(p.ramo)}</span>
